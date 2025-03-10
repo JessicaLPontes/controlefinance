@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle Financeiro</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Adicione o Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js"></script>
 </head>
 <body>
     <div class="container">
@@ -46,9 +48,6 @@
         <ul id="transaction-list"></ul>
 
         <h2>Saldo: <span id="balance">R$ 0,00</span></h2>
-
-        <h2>Gráfico Mensal</h2>
-        <canvas id="chart"></canvas>
     </div>
 
     <script src="script.js"></script>
