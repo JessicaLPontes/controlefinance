@@ -11,6 +11,8 @@ const firebaseConfig = {
 
 // Inicializa o Firebase
 const app = firebase.initializeApp(firebaseConfig);
+console.log('Firebase inicializado:', app);
+
 const db = firebase.firestore(); // Referência ao Firestore
 
 // Elementos da interface
@@ -27,17 +29,19 @@ function addTransaction(event) {
     const type = document.getElementById('type').value;
     const month = document.getElementById('month').value;
 
+    console.log('Dados do formulário:', { description, amount, type, month });
+
     db.collection('transactions').add({
         description,
         amount,
         type,
         month,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(), // Adiciona timestamp
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     })
     .then(() => {
         console.log('Transação adicionada com sucesso!');
-        transactionForm.reset(); // Limpa o formulário
-        loadTransactions(); // Recarrega a lista de transações
+        transactionForm.reset();
+        loadTransactions();
     })
     .catch((error) => {
         console.error('Erro ao adicionar transação: ', error);
@@ -48,48 +52,15 @@ function addTransaction(event) {
 function loadTransactions() {
     db.collection('transactions').get()
         .then((snapshot) => {
+            console.log('Transações carregadas:', snapshot.docs);
             const transactions = [];
             snapshot.forEach((doc) => {
                 transactions.push({ id: doc.id, ...doc.data() });
             });
-            updateDisplay(transactions); // Atualiza a exibição
+            updateDisplay(transactions);
         })
         .catch((error) => {
             console.error('Erro ao buscar transações: ', error);
-        });
-}
-
-// Função para editar transação
-function editTransaction(id) {
-    const transaction = transactions.find(t => t.id === id);
-    if (!transaction) return;
-
-    // Preenche o formulário com os dados da transação
-    document.getElementById('description').value = transaction.description;
-    document.getElementById('amount').value = transaction.amount;
-    document.getElementById('type').value = transaction.type;
-    document.getElementById('month').value = transaction.month;
-
-    // Remove a transação da lista
-    db.collection('transactions').doc(id).delete()
-        .then(() => {
-            console.log('Transação excluída com sucesso!');
-            loadTransactions(); // Recarrega a lista de transações
-        })
-        .catch((error) => {
-            console.error('Erro ao excluir transação: ', error);
-        });
-}
-
-// Função para excluir transação
-function deleteTransaction(id) {
-    db.collection('transactions').doc(id).delete()
-        .then(() => {
-            console.log('Transação excluída com sucesso!');
-            loadTransactions(); // Recarrega a lista de transações
-        })
-        .catch((error) => {
-            console.error('Erro ao excluir transação: ', error);
         });
 }
 
