@@ -1,36 +1,22 @@
+// Configuração do Firebase
+const firebaseConfig = {
+    apiKey: "AIzaSyB0yrp9gvOWBsNQeNCMEeupwloJrIrPedk",
+    authDomain: "controle-financeiro-2d3ba.firebaseapp.com",
+    projectId: "controle-financeiro-2d3ba",
+    storageBucket: "controle-financeiro-2d3ba.firebasestorage.app",
+    messagingSenderId: "768132634596",
+    appId: "1:768132634596:web:9bcc7c3f7b86f20cc6d9f1",
+    measurementId: "G-4K844EZWEH"
+};
+
+// Inicializa o Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore(); // Referência ao Firestore
+
+// Elementos da interface
 const transactionForm = document.getElementById('transaction-form');
 const transactionList = document.getElementById('transaction-list');
 const balanceElement = document.getElementById('balance');
-const chartCanvas = document.getElementById('chart').getContext('2d');
-
-let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
-
-// Inicializa o gráfico
-const chart = new Chart(chartCanvas, {
-    type: 'bar',
-    data: {
-        labels: [],
-        datasets: [
-            {
-                label: 'Receitas',
-                data: [],
-                backgroundColor: 'green',
-            },
-            {
-                label: 'Despesas',
-                data: [],
-                backgroundColor: 'red',
-            },
-        ],
-    },
-    options: {
-        scales: {
-            y: {
-                beginAtZero: true,
-            },
-        },
-    },
-});
 
 // Função para adicionar transação
 function addTransaction(event) {
@@ -41,18 +27,36 @@ function addTransaction(event) {
     const type = document.getElementById('type').value;
     const month = document.getElementById('month').value;
 
-    const transaction = {
-        id: Date.now(),
+    db.collection('transactions').add({
         description,
         amount,
         type,
         month,
-    };
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(), // Adiciona timestamp
+    })
+    .then(() => {
+        console.log('Transação adicionada com sucesso!');
+        transactionForm.reset(); // Limpa o formulário
+        loadTransactions(); // Recarrega a lista de transações
+    })
+    .catch((error) => {
+        console.error('Erro ao adicionar transação: ', error);
+    });
+}
 
-    transactions.push(transaction);
-    saveTransactions();
-    updateDisplay();
-    transactionForm.reset();
+// Função para carregar transações
+function loadTransactions() {
+    db.collection('transactions').get()
+        .then((snapshot) => {
+            const transactions = [];
+            snapshot.forEach((doc) => {
+                transactions.push({ id: doc.id, ...doc.data() });
+            });
+            updateDisplay(transactions); // Atualiza a exibição
+        })
+        .catch((error) => {
+            console.error('Erro ao buscar transações: ', error);
+        });
 }
 
 // Função para editar transação
@@ -67,25 +71,30 @@ function editTransaction(id) {
     document.getElementById('month').value = transaction.month;
 
     // Remove a transação da lista
-    transactions = transactions.filter(t => t.id !== id);
-    saveTransactions();
-    updateDisplay();
+    db.collection('transactions').doc(id).delete()
+        .then(() => {
+            console.log('Transação excluída com sucesso!');
+            loadTransactions(); // Recarrega a lista de transações
+        })
+        .catch((error) => {
+            console.error('Erro ao excluir transação: ', error);
+        });
 }
 
 // Função para excluir transação
 function deleteTransaction(id) {
-    transactions = transactions.filter(t => t.id !== id);
-    saveTransactions();
-    updateDisplay();
-}
-
-// Função para salvar transações no localStorage
-function saveTransactions() {
-    localStorage.setItem('transactions', JSON.stringify(transactions));
+    db.collection('transactions').doc(id).delete()
+        .then(() => {
+            console.log('Transação excluída com sucesso!');
+            loadTransactions(); // Recarrega a lista de transações
+        })
+        .catch((error) => {
+            console.error('Erro ao excluir transação: ', error);
+        });
 }
 
 // Função para atualizar a exibição
-function updateDisplay() {
+function updateDisplay(transactions) {
     transactionList.innerHTML = '';
     let balance = 0;
 
@@ -93,13 +102,13 @@ function updateDisplay() {
     const selectedMonth = document.getElementById('month').value;
     const filteredTransactions = transactions.filter(t => t.month === selectedMonth);
 
-    filteredTransactions.forEach(transaction => {
+    filteredTransactions.forEach((transaction) => {
         const li = document.createElement('li');
         li.innerHTML = `
             <span>${transaction.description}</span>
             <span class="${transaction.type}">${transaction.type === 'income' ? '+' : '-'} R$ ${transaction.amount.toFixed(2)}</span>
-            <button class="edit" onclick="editTransaction(${transaction.id})">Editar</button>
-            <button class="delete" onclick="deleteTransaction(${transaction.id})">Excluir</button>
+            <button class="edit" onclick="editTransaction('${transaction.id}')">Editar</button>
+            <button class="delete" onclick="deleteTransaction('${transaction.id}')">Excluir</button>
         `;
         transactionList.appendChild(li);
 
@@ -111,36 +120,10 @@ function updateDisplay() {
     });
 
     balanceElement.textContent = `R$ ${balance.toFixed(2)}`;
-    updateChart();
-}
-
-// Função para atualizar o gráfico
-function updateChart() {
-    const months = [
-        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
-    ];
-
-    const incomeData = new Array(12).fill(0);
-    const expenseData = new Array(12).fill(0);
-
-    transactions.forEach(transaction => {
-        const monthIndex = parseInt(transaction.month) - 1;
-        if (transaction.type === 'income') {
-            incomeData[monthIndex] += transaction.amount;
-        } else {
-            expenseData[monthIndex] += transaction.amount;
-        }
-    });
-
-    chart.data.labels = months;
-    chart.data.datasets[0].data = incomeData;
-    chart.data.datasets[1].data = expenseData;
-    chart.update();
 }
 
 // Carrega as transações ao iniciar
-updateDisplay();
+loadTransactions();
 
 // Adiciona evento ao formulário
 transactionForm.addEventListener('submit', addTransaction);
